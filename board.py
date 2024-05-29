@@ -3,16 +3,16 @@ from piece import Piece
 
 ROWS, COLS = 8, 8
 SQUARE_SIZE = 800 // COLS
+GREEN = (0, 128, 0)
+YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GREEN = (0, 128, 0)
 
 class Board:
     def __init__(self):
         self.board = self.create_board()
-        print("Board created")  # Debug statement
-        self.print_board_state()  # Print initial board state
+        print("Board created")
+        self.print_board_state()
 
     def create_board(self):
         board = []
@@ -48,6 +48,11 @@ class Board:
                 if (row + col) % 2 == 1:
                     pygame.draw.rect(screen, GREEN, (col * SQUARE_SIZE, row * SQUARE_SIZE + offset, SQUARE_SIZE, SQUARE_SIZE))
 
+    def draw_valid_moves(self, screen, moves, offset):
+        for move in moves:
+            row, col = move
+            pygame.draw.circle(screen, YELLOW, (col * SQUARE_SIZE + SQUARE_SIZE // 2, row * SQUARE_SIZE + SQUARE_SIZE // 2 + offset), 15)
+
     def get_row_col_from_mouse(self, pos):
         x, y = pos
         y = y - 50  # Adjust for offset
@@ -60,15 +65,15 @@ class Board:
         return row, col
 
     def is_valid_selection(self, row, col, turn):
-        if row < 0 or row >= ROWS or col < 0 or col >= COLS:
-            print(f"Invalid position: {(row, col)}")  # Debug statement
+        if row < 0 or row >= ROWS or col < 0 or row >= COLS:
+            print(f"Invalid position: {(row, col)}")
             return False
         piece = self.board[row][col]
         if piece == 0:
-            print(f"No piece at: {(row, col)}")  # Debug statement
+            print(f"No piece at: {(row, col)}")
             return False
         valid = (piece.color == RED and turn == "RED") or (piece.color == BLACK and turn == "BLACK")
-        print(f"Selection at {(row, col)} is {'valid' if valid else 'invalid'} for turn {turn}")  # Debug statement
+        print(f"Selection at {(row, col)} is {'valid' if valid else 'invalid'} for turn {turn}")
         return valid
 
     def valid_move(self, piece, row, col):
@@ -86,24 +91,30 @@ class Board:
             mid_row = (row + piece.row) // 2
             mid_col = (col + piece.col) // 2
             if self.board[mid_row][mid_col] != 0 and self.board[mid_row][mid_col].color != piece.color:
-                print(f"Captured piece: {self.board[mid_row][mid_col]} at {(mid_row, mid_col)}")  # Debug statement
+                captured_color = "RED" if self.board[mid_row][mid_col].color == RED else "BLACK"
+                piece_color = "RED" if piece.color == RED else "BLACK"
+                print(f"{piece_color} captured {captured_color} at {(mid_row, mid_col)}")
                 return True
         return False
 
     def move_piece(self, piece, row, col):
-        mid_row = (row + piece.row) // 2
-        mid_col = (col + piece.col) // 2
-        captured = None
+        captured_pieces = []
         if abs(row - piece.row) == 2 and abs(col - piece.col) == 2:
-            captured = self.board[mid_row][mid_col]
+            mid_row = (row + piece.row) // 2
+            mid_col = (col + piece.col) // 2
+            captured_piece = self.board[mid_row][mid_col]
             self.board[mid_row][mid_col] = 0
-            print(f"{piece.color} captured {captured.color} at {(mid_row, mid_col)}")  # Debug statement
+            captured_pieces.append(captured_piece)
+            captured_color = "RED" if captured_piece.color == RED else "BLACK"
+            piece_color = "RED" if piece.color == RED else "BLACK"
+            print(f"{piece_color} captured {captured_color} at {(mid_row, mid_col)}")
+
         self.board[piece.row][piece.col] = 0
         piece.move(row, col)
         if row == 0 or row == ROWS - 1:
             piece.make_king()
         self.board[row][col] = piece
-        return captured is not None  # Return whether a capture occurred
+        return captured_pieces
 
     def get_all_valid_moves(self, piece):
         moves = {}
@@ -120,3 +131,35 @@ class Board:
                     if self.valid_move(piece, row, col):
                         return True
         return False
+
+    def get_capture_paths(self, piece):
+        def dfs(current_piece, path, visited):
+            capture_paths = []
+            moves = self.get_all_valid_moves(current_piece)
+            for move in moves:
+                row, col = move
+                if abs(row - current_piece.row) == 2 and abs(col - current_piece.col) == 2:
+                    mid_row = (row + current_piece.row) // 2
+                    mid_col = (col + current_piece.col) // 2
+                    if (mid_row, mid_col) not in visited:
+                        new_piece = Piece(row, col, current_piece.color)
+                        new_piece.king = current_piece.king
+                        new_path = path + [(row, col)]
+                        new_visited = visited.copy()
+                        new_visited.add((mid_row, mid_col))
+                        sub_paths = dfs(new_piece, new_path, new_visited)
+                        if sub_paths:
+                            capture_paths.extend(sub_paths)
+                        else:
+                            capture_paths.append(new_path)
+            if not capture_paths:
+                capture_paths.append(path)
+            return capture_paths
+
+        paths = dfs(piece, [], set())
+        paths = [path for path in paths if path]  # Filter out empty paths
+        if not paths:
+            return []
+        max_length = max(len(path) for path in paths)
+        return [path for path in paths if len(path) == max_length]
+
