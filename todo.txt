@@ -1,1 +1,1 @@
-force capture not working -> normal capture is broken by this too === cannot solve this
+capture more than 1 is not working === cannot solve this

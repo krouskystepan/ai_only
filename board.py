@@ -11,8 +11,6 @@ BLACK = (0, 0, 0)
 class Board:
     def __init__(self):
         self.board = self.create_board()
-        print("Board created")
-        self.print_board_state()
 
     def create_board(self):
         board = []
@@ -29,10 +27,6 @@ class Board:
                 else:
                     board[row].append(0)
         return board
-
-    def print_board_state(self):
-        for row in self.board:
-            print([str(piece) if piece != 0 else 0 for piece in row])
 
     def draw(self, screen, offset):
         self.draw_squares(screen, offset)
@@ -65,16 +59,12 @@ class Board:
         return row, col
 
     def is_valid_selection(self, row, col, turn):
-        if row < 0 or row >= ROWS or col < 0 or row >= COLS:
-            print(f"Invalid position: {(row, col)}")
+        if row < 0 or row >= ROWS or col < 0 or col >= COLS:
             return False
         piece = self.board[row][col]
         if piece == 0:
-            print(f"No piece at: {(row, col)}")
             return False
-        valid = (piece.color == RED and turn == "RED") or (piece.color == BLACK and turn == "BLACK")
-        print(f"Selection at {(row, col)} is {'valid' if valid else 'invalid'} for turn {turn}")
-        return valid
+        return (piece.color == RED and turn == "RED") or (piece.color == BLACK and turn == "BLACK")
 
     def valid_move(self, piece, row, col):
         if row < 0 or row >= ROWS or col < 0 or col >= COLS:
@@ -91,9 +81,6 @@ class Board:
             mid_row = (row + piece.row) // 2
             mid_col = (col + piece.col) // 2
             if self.board[mid_row][mid_col] != 0 and self.board[mid_row][mid_col].color != piece.color:
-                captured_color = "RED" if self.board[mid_row][mid_col].color == RED else "BLACK"
-                piece_color = "RED" if piece.color == RED else "BLACK"
-                print(f"{piece_color} captured {captured_color} at {(mid_row, mid_col)}")
                 return True
         return False
 
@@ -104,11 +91,7 @@ class Board:
             mid_col = (col + piece.col) // 2
             captured_piece = self.board[mid_row][mid_col]
             self.board[mid_row][mid_col] = 0
-            captured_pieces.append(captured_piece)
-            captured_color = "RED" if captured_piece.color == RED else "BLACK"
-            piece_color = "RED" if piece.color == RED else "BLACK"
-            print(f"{piece_color} captured {captured_color} at {(mid_row, mid_col)}")
-
+            captured_pieces.append((mid_row, mid_col))
         self.board[piece.row][piece.col] = 0
         piece.move(row, col)
         if row == 0 or row == ROWS - 1:
@@ -162,4 +145,3 @@ class Board:
             return []
         max_length = max(len(path) for path in paths)
         return [path for path in paths if len(path) == max_length]
-
